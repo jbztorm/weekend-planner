@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useItineraryStore } from '../store/itinerary';
+import { getDefaultWeather } from '../lib/weather';
 
 export function ResultPage() {
   const navigate = useNavigate();
@@ -33,12 +34,13 @@ export function ResultPage() {
   }
 
   const { title, places, route, summary, weather, child_age } = currentItinerary;
+  
+  // 获取天气信息
+  const weatherInfo = weather || getDefaultWeather() as any;
 
   const handleSave = () => {
-    // 保存到 store
     addSavedItinerary(currentItinerary);
     
-    // 同时保存到 localStorage（持久化）
     const saved = JSON.parse(localStorage.getItem('weekend-planner-saved') || '[]');
     if (!saved.find((i: any) => i.id === currentItinerary.id)) {
       saved.unshift(currentItinerary);
@@ -49,7 +51,6 @@ export function ResultPage() {
   };
 
   const handleShare = () => {
-    // 生成分享链接
     const shareUrl = `${window.location.origin}/shared/${currentItinerary.id}`;
     navigator.clipboard.writeText(shareUrl);
     alert('分享链接已复制到剪贴板！');
@@ -73,12 +74,10 @@ export function ResultPage() {
           <span>{child_age}岁</span>
           <span>·</span>
           <span>{summary.total_distance}km内</span>
-          {weather && (
-            <>
-              <span>·</span>
-              <span>🌤️ {weather.temp}</span>
-            </>
-          )}
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            {weatherInfo.icon || '☀️'} {weatherInfo.temp || '18-25°C'}
+          </span>
         </div>
       </div>
 
@@ -87,7 +86,7 @@ export function ResultPage() {
         <h2 className="font-semibold text-gray-800 mb-3">📍 推荐路线</h2>
         
         <div className="space-y-0">
-          {places.map((place, index) => (
+          {places.map((place: any, index: number) => (
             <div key={place.place_id} className="relative">
               {/* 时间线 */}
               <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col items-center">

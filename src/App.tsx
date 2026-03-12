@@ -5,6 +5,7 @@ import { ResultPage } from './pages/ResultPage';
 import { MapPage } from './pages/MapPage';
 import { SharedPage } from './pages/SharedPage';
 import { SavedPage } from './pages/SavedPage';
+import { LoginPage } from './pages/LoginPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/result" element={<ResultPage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/saved" element={<SavedPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/shared/:token" element={<SharedPage />} />
       </Routes>
     </BrowserRouter>

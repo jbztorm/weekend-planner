@@ -3,15 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
+interface User {
+  id: string;
+  email: string;
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const [savedCount, setSavedCount] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     // 检查收藏数量
     const saved = JSON.parse(localStorage.getItem('weekend-planner-saved') || '[]');
     setSavedCount(saved.length);
+
+    // 检查用户登录状态
+    const savedUser = localStorage.getItem('weekend-planner-user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('weekend-planner-user');
+    setUser(null);
+  };
 
   const features = [
     { icon: '👶', title: '年龄适配', desc: '根据宝宝年龄推荐合适场所' },
@@ -24,17 +41,37 @@ export function HomePage() {
       {/* Header */}
       <header className="p-4 flex items-center justify-between">
         <div className="text-2xl font-bold text-[#FF6B35]">周末去哪玩</div>
-        <button 
-          onClick={() => navigate('/saved')}
-          className="flex items-center gap-1 text-gray-600 hover:text-[#FF6B35]"
-        >
-          <span>💾</span>
-          {savedCount > 0 && (
-            <span className="bg-[#FF6B35] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {savedCount}
-            </span>
+        <div className="flex items-center gap-2">
+          {/* 登录/用户 */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => navigate('/saved')}
+                className="flex items-center gap-1 text-gray-600 hover:text-[#FF6B35]"
+              >
+                <span>💾</span>
+                {savedCount > 0 && (
+                  <span className="bg-[#FF6B35] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {savedCount}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                退出
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')}
+              className="text-sm text-[#FF6B35] font-medium"
+            >
+              登录
+            </button>
           )}
-        </button>
+        </div>
       </header>
 
       {/* Hero */}
