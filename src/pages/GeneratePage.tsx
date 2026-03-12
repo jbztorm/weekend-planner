@@ -152,6 +152,7 @@ export function GeneratePage() {
 
       const itinerary = createItinerary(result, childAge, maxDistance);
       setCurrentItinerary(itinerary);
+      setLoading(false);  // 添加这行！
       navigate('/result');
     } catch (err: any) {
       console.error('❌ API 调用失败:', err);
