@@ -45,17 +45,11 @@ export async function generateItinerary(
     weekend: '周末两天',
   };
 
-  const query = `我住在北京市区，孩子${childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁'}，想去遛娃。
-请帮我推荐${maxDistance}公里内最好的${prefText[preference as keyof typeof prefText]}。
-日期是${dateText[date as keyof typeof dateText]}。
+  const query = `我住在北京市区，孩子${childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁'}，周末想去遛娃。
+请帮我推荐${maxDistance}公里内最好的亲子场所。
 
-请以严格的JSON格式输出：
-{
-  "title": "行程标题",
-  "places": [{"name": "地点名称", "address": "详细地址", "reason": "推荐理由", "arrive_time": "09:30", "leave_time": "10:30", "duration": 60, "tips": "实用小贴士"}],
-  "summary": {"total_places": 数量, "total_duration": 分钟数}
-}
-只输出JSON。`;
+请严格按照以下JSON格式输出，不要其他文字：
+{"title":"周末亲子游","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":4,"total_duration":240}}
 
   const messages = [
     {
