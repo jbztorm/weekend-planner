@@ -111,97 +111,87 @@ export function GeneratePage() {
     setLoading(true);
     setError('');
 
-    try {
-      let result;
-      
-      if (useMock) {
-        // 使用模拟数据
-        result = {
-          title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
-          places: mockPlaces,
-          summary: {
-            total_places: mockPlaces.length,
-            total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
-          },
-        };
-      } else {
-        // 检查 API Key
-        const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
-        console.log('API Key 状态:', apiKey ? '已配置' : '未配置');
-        
-        if (!apiKey) {
-          setError('错误：Perplexity API Key 未配置');
-          result = {
-            title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
-            places: mockPlaces,
-            summary: {
-              total_places: mockPlaces.length,
-              total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
-            },
-          };
-        } else {
-          // 尝试调用 API
-          try {
-            result = await generateItinerary({
-              childAge,
-              maxDistance: maxDistance as number,
-              preference,
-              date,
-            });
-          } catch (apiError: any) {
-            console.error('API 调用失败:', apiError);
-            setError(`API 调用失败: ${apiError?.message || '未知错误'}`);
-            result = {
-              title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
-              places: mockPlaces,
-              summary: {
-                total_places: mockPlaces.length,
-                total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
-              },
-            };
-          }
-        }
-      }
-
-      const itinerary = {
-        id: 'itinerary-' + Date.now(),
-        title: result.title,
-        date: new Date().toISOString().split('T')[0],
-        child_age: childAge,
-        places: result.places.map((place: any, idx: number) => ({
-          order: idx + 1,
-          place_id: `place-${idx}`,
-          name: place.name,
-          type: 'outdoor',
-          address: place.address,
-          location: { lat: 39.9 + Math.random() * 0.1, lng: 116.4 + Math.random() * 0.1 },
-          arrive_time: place.arrive_time,
-          leave_time: place.leave_time,
-          duration: place.duration,
-          reason: place.reason,
-          tips: place.tips,
-        })),
-        route: result.places.slice(0, -1).map((place: any, idx: number) => ({
-          from: place.name,
-          to: result.places[idx + 1]?.name || '',
-          duration: Math.floor(Math.random() * 30) + 15,
-        })),
+    // 演示模式
+    if (useMock) {
+      const result = {
+        title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
+        places: mockPlaces,
         summary: {
-          total_places: result.summary.total_places,
-          total_duration: result.summary.total_duration,
-          total_distance: maxDistance as number,
+          total_places: mockPlaces.length,
+          total_duration: mockPlaces.reduce((sum: number, p: any) => sum + p.duration, 0),
         },
-        created_at: new Date().toISOString(),
       };
+      
+      const itinerary = createItinerary(result, childAge, maxDistance);
+      setCurrentItinerary(itinerary);
+      setLoading(false);
+      navigate('/result');
+      return;
+    }
 
+    // 真实 API 调用模式
+    const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
+    
+    if (!apiKey) {
+      setLoading(false);
+      setError('❌ 错误：Perplexity API Key 未配置。请在 Vercel 环境变量中添加 VITE_PERPLEXITY_API_KEY');
+      return;
+    }
+
+    try {
+      console.log('🔄 开始调用 Perplexity API...');
+      
+      const result = await generateItinerary({
+        childAge,
+        maxDistance: maxDistance as number,
+        preference,
+        date,
+      });
+
+      console.log('✅ API 返回成功:', result);
+
+      const itinerary = createItinerary(result, childAge, maxDistance);
       setCurrentItinerary(itinerary);
       navigate('/result');
     } catch (err: any) {
-      console.error('生成失败:', err);
-      setError(err.message || '行程生成失败，请稍后重试');
-    } finally {
+      console.error('❌ API 调用失败:', err);
       setLoading(false);
+      setError(`❌ AI 生成失败: ${err?.message || '未知错误'}\n\n请检查 Vercel 环境变量是否正确配置。`);
+      return;
     }
+  };
+
+  const createItinerary = (result: any, childAge: string, maxDistance: number) => {
+    return {
+      id: 'itinerary-' + Date.now(),
+      title: result.title,
+      date: new Date().toISOString().split('T')[0],
+      child_age: childAge as ChildAge,
+      places: result.places.map((place: any, idx: number) => ({
+        order: idx + 1,
+        place_id: `place-${idx}`,
+        name: place.name,
+        type: 'outdoor',
+        address: place.address,
+        location: { lat: 39.9 + Math.random() * 0.1, lng: 116.4 + Math.random() * 0.1 },
+        arrive_time: place.arrive_time,
+        leave_time: place.leave_time,
+        duration: place.duration,
+        reason: place.reason,
+        tips: place.tips,
+      })),
+      route: result.places.slice(0, -1).map((place: any, idx: number) => ({
+        from: place.name,
+        to: result.places[idx + 1]?.name || '',
+        duration: Math.floor(Math.random() * 30) + 15,
+      })),
+      summary: {
+        total_places: result.summary.total_places,
+        total_duration: result.summary.total_duration,
+        total_distance: maxDistance,
+      },
+      created_at: new Date().toISOString(),
+    };
   };
 
   return (
@@ -328,7 +318,7 @@ export function GeneratePage() {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm whitespace-pre-wrap">
           {error}
         </div>
       )}
