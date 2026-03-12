@@ -125,18 +125,12 @@ export function GeneratePage() {
           },
         };
       } else {
-        // 尝试调用 API
-        try {
-          result = await generateItinerary({
-            childAge,
-            maxDistance: maxDistance as number,
-            preference,
-            date,
-          });
-        } catch (apiError: any) {
-          console.warn('API 调用失败:', apiError);
-          // 显示错误但仍使用模拟数据
-          setError('API 调用失败，已使用演示数据。如需真实生成，请检查 API 配置。');
+        // 检查 API Key
+        const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
+        console.log('API Key 状态:', apiKey ? '已配置' : '未配置');
+        
+        if (!apiKey) {
+          setError('错误：Perplexity API Key 未配置');
           result = {
             title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
             places: mockPlaces,
@@ -145,6 +139,27 @@ export function GeneratePage() {
               total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
             },
           };
+        } else {
+          // 尝试调用 API
+          try {
+            result = await generateItinerary({
+              childAge,
+              maxDistance: maxDistance as number,
+              preference,
+              date,
+            });
+          } catch (apiError: any) {
+            console.error('API 调用失败:', apiError);
+            setError(`API 调用失败: ${apiError?.message || '未知错误'}`);
+            result = {
+              title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
+              places: mockPlaces,
+              summary: {
+                total_places: mockPlaces.length,
+                total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
+              },
+            };
+          }
         }
       }
 
