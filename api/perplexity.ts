@@ -1,25 +1,44 @@
-import { Perplexity } from '@perplexity-ai/perplexity_ai';
-
-const perplexity = new Perplexity({
-  apiKey: process.env.PERPLEXITY_API_KEY || '',
-});
-
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: 'API Key 未配置' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
   try {
     const { messages, model = 'sonar-pro' } = await req.json();
 
-    const response = await perplexity.chat.completions.create({
-      model,
-      messages,
+    // 直接用 fetch 调用 Perplexity
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+      }),
     });
 
-    return new Response(JSON.stringify(response), {
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Perplexity API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -29,9 +48,7 @@ export default async function handler(req: Request) {
     console.error('Perplexity API error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
