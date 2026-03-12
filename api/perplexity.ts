@@ -1,11 +1,6 @@
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const runtime = 'edge';
 
+export async function POST(req: Request) {
   const apiKey = process.env.PERPLEXITY_API_KEY;
 
   if (!apiKey) {
@@ -18,17 +13,13 @@ export default async function handler(req: Request) {
   try {
     const { messages, model = 'sonar-pro' } = await req.json();
 
-    // 直接用 fetch 调用 Perplexity
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        messages,
-      }),
+      body: JSON.stringify({ model, messages }),
     });
 
     if (!response.ok) {
@@ -37,12 +28,9 @@ export default async function handler(req: Request) {
     }
 
     const data = await response.json();
-
     return new Response(JSON.stringify(data), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Perplexity API error:', error);
