@@ -1,17 +1,21 @@
-export const runtime = 'edge';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export async function POST(req: Request) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   const apiKey = process.env.PERPLEXITY_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API Key 未配置' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'API Key 未配置' });
   }
 
   try {
-    const { messages, model = 'sonar-pro' } = await req.json();
+    const { messages, model = 'sonar-pro' } = req.body;
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -28,15 +32,9 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(data);
   } catch (error: any) {
     console.error('Perplexity API error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
