@@ -34,11 +34,35 @@ export async function generateItinerary(
 
   const ageText = childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁';
 
-  // 使用更简单直接的 prompt
-  const query = '{"title":"周末亲子游","places":[{"name":"朝阳公园","address":"北京市朝阳区","reason":"适合遛娃","arrive_time":"09:00","leave_time":"11:00","duration":120,"tips":"带好水和食物"}],"summary":{"total_places":1,"total_duration":120}}';
+  // 构建用户查询，包含明确的 JSON 输出指令
+  const userQuery = `请为${ageText}的孩子设计一个周末亲子活动行程，距离不超过${maxDistance}公里。
+
+请严格按照以下JSON格式返回，不要有任何解释或额外文字：
+{
+  "title": "行程标题",
+  "places": [
+    {
+      "name": "地点名称",
+      "address": "地址",
+      "reason": "为什么适合亲子",
+      "arrive_time": "到达时间，格式HH:MM",
+      "leave_time": "离开时间，格式HH:MM",
+      "duration": "游玩时长（分钟）",
+      "tips": "实用小贴士"
+    }
+  ],
+  "summary": {
+    "total_places": "地点总数",
+    "total_duration": "总时长（分钟）"
+  }
+}`;
 
   const messages = [
-    { role: 'user', content: query },
+    { 
+      role: 'system', 
+      content: '你是一个专业的亲子活动规划助手。请严格按照用户要求的JSON格式返回，不要包含任何解释、问候语或额外文字。只返回纯粹的JSON对象。' 
+    },
+    { role: 'user', content: userQuery },
   ];
 
   const response = await fetch('/api/perplexity', {
