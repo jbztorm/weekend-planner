@@ -1,8 +1,4 @@
-import { Perplexity } from '@perplexity-ai/perplexity_ai';
-
-const perplexity = new Perplexity({
-  apiKey: import.meta.env.VITE_PERPLEXITY_API_KEY || '',
-});
+import type { ChildAge, Preference, DateType } from './types';
 
 export interface ItineraryParams {
   childAge: string;
@@ -49,7 +45,7 @@ function getContentText(content: any): string {
 
 /**
  * 使用 Perplexity 生成亲子活动行程
- * Perplexity 优势：自带实时搜索，能获取最新地点信息
+ * 通过 Vercel API 代理避免 CORS 问题
  */
 export async function generateItinerary(
   params: ItineraryParams
@@ -96,22 +92,38 @@ export async function generateItinerary(
 
 只输出JSON，不要其他文字。`;
 
+  const messages = [
+    {
+      role: 'system',
+      content: '你是一位专业的北京亲子活动规划师。请根据用户需求推荐适合的亲子活动场所。只输出JSON格式，不要输出其他文字。',
+    },
+    {
+      role: 'user',
+      content: query,
+    },
+  ];
+
   try {
-    const response = await perplexity.chat.completions.create({
-      model: 'sonar-pro',
-      messages: [
-        {
-          role: 'system',
-          content: '你是一位专业的北京亲子活动规划师。请根据用户需求推荐适合的亲子活动场所。只输出JSON格式，不要输出其他文字。',
-        },
-        {
-          role: 'user',
-          content: query,
-        },
-      ],
+    // 调用本地 API 代理
+    const apiUrl = '/api/perplexity';
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages,
+        model: 'sonar-pro',
+      }),
     });
 
-    const rawContent = response.choices[0]?.message?.content;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API 错误 (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content;
     const content = getContentText(rawContent);
 
     if (!content) {
@@ -138,33 +150,5 @@ export async function generateItinerary(
   } catch (error) {
     console.error('Perplexity API 错误:', error);
     throw error;
-  }
-}
-
-/**
- * 搜索北京亲子场所
- */
-export async function searchPlaces(
-  keyword: string,
-  location: string = '北京'
-): Promise<string[]> {
-  try {
-    const response = await perplexity.chat.completions.create({
-      model: 'sonar-pro',
-      messages: [
-        {
-          role: 'user',
-          content: `搜索${location}附近的${keyword}，列出前5个最受欢迎的，简要说明每个的特点。`,
-        },
-      ],
-    });
-
-    const rawContent = response.choices[0]?.message?.content;
-    const content = getContentText(rawContent);
-
-    return [content];
-  } catch (error) {
-    console.error('搜索失败:', error);
-    return [];
   }
 }
