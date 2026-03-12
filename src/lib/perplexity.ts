@@ -34,13 +34,12 @@ export async function generateItinerary(
 
   const ageText = childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁';
 
-  const query = '我住在北京市区，孩子' + ageText + '，周末想去遛娃。' +
-    '请帮我推荐' + maxDistance + '公里内最好的亲子场所。' +
-    '请严格按照以下JSON格式输出，不要其他文字：' +
-    '{"title":"周末亲子游","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":4,"total_duration":240}}';
+  // 简化 prompt，直接要求返回简单的 JSON
+  const query = '北京亲子活动推荐：孩子' + ageText + '，' + maxDistance + '公里内。' +
+    '请只返回以下格式的JSON，不要其他内容：' +
+    '{"title":"标题","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":1,"total_duration":60}}';
 
   const messages = [
-    { role: 'system', content: '你是一位专业的北京亲子活动规划师。只输出JSON格式。' },
     { role: 'user', content: query },
   ];
 
@@ -52,24 +51,26 @@ export async function generateItinerary(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error('API 错误 (' + response.status + '): ' + errorText);
+    throw new Error('API错误: ' + errorText);
   }
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
 
-  console.log('API 返回:', content.substring(0, 100));
-
-  if (!content) {
-    throw new Error('API 返回内容为空');
+  // 直接解析整个响应为 JSON
+  let result: GeneratedItinerary;
+  try {
+    // 尝试直接解析
+    result = JSON.parse(content);
+  } catch {
+    // 如果失败，尝试提取 JSON
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      result = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('无法解析返回内容');
+    }
   }
-
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('无法解析返回内容: ' + content.substring(0, 50));
-  }
-
-  const result = JSON.parse(jsonMatch[0]) as GeneratedItinerary;
 
   return {
     title: result.title || '周末亲子游',
