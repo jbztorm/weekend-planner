@@ -26,6 +26,46 @@ const dateOptions = [
   { value: 'weekend', label: '周末两天' },
 ];
 
+// 模拟数据
+const mockPlaces = [
+  {
+    name: '朝阳公园',
+    address: '北京市朝阳区朝阳公园南路',
+    reason: '户外活动，适合孩子奔跑玩耍，有大片绿地和儿童游乐区',
+    arrive_time: '09:30',
+    leave_time: '10:30',
+    duration: 60,
+    tips: '带好防晒帽和饮用水，注意安全',
+  },
+  {
+    name: '亲子餐厅',
+    address: '北京市朝阳区建国路93号',
+    reason: '午餐休息，有儿童餐和儿童座椅，适合家庭用餐',
+    arrive_time: '10:45',
+    leave_time: '12:00',
+    duration: 75,
+    tips: '建议提前预约',
+  },
+  {
+    name: 'mini mars',
+    address: '北京市朝阳区三里屯太古里',
+    reason: '高端室内游乐场，设施完善，适合放电',
+    arrive_time: '13:00',
+    leave_time: '15:00',
+    duration: 120,
+    tips: '记得带防滑袜',
+  },
+  {
+    name: '绘本王国',
+    address: '北京市海淀区中关村大街',
+    reason: '海量绘本，亲子阅读空间，培养阅读习惯',
+    arrive_time: '15:30',
+    leave_time: '17:00',
+    duration: 90,
+    tips: '保持安静，注意不要损坏绘本',
+  },
+];
+
 export function GeneratePage() {
   const navigate = useNavigate();
   const { preferences, setPreferences, setLoading, setCurrentItinerary, setUserLocation } = useItineraryStore();
@@ -35,6 +75,7 @@ export function GeneratePage() {
   const [preference, setPreference] = useState<Preference>(preferences.preference);
   const [date, setDate] = useState<DateType>(preferences.date);
   const [error, setError] = useState<string>('');
+  const [useMock, setUseMock] = useState(false);
 
   const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve) => {
@@ -47,7 +88,6 @@ export function GeneratePage() {
             });
           },
           () => {
-            // 默认北京
             resolve({ lat: 39.9042, lng: 116.4074 });
           }
         );
@@ -58,7 +98,6 @@ export function GeneratePage() {
   };
 
   const handleGenerate = async () => {
-    // 更新偏好
     setPreferences({
       childAge,
       maxDistance: maxDistance as 5 | 10 | 20 | 30,
@@ -66,7 +105,6 @@ export function GeneratePage() {
       date,
     });
 
-    // 获取用户位置
     const userLoc = await getUserLocation();
     setUserLocation(userLoc);
 
@@ -74,34 +112,59 @@ export function GeneratePage() {
     setError('');
 
     try {
-      // 调用 Perplexity AI 生成行程
-      const result = await generateItinerary({
-        childAge,
-        maxDistance: maxDistance as number,
-        preference,
-        date,
-      });
+      let result;
+      
+      if (useMock) {
+        // 使用模拟数据
+        result = {
+          title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
+          places: mockPlaces,
+          summary: {
+            total_places: mockPlaces.length,
+            total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
+          },
+        };
+      } else {
+        // 尝试调用 API
+        try {
+          result = await generateItinerary({
+            childAge,
+            maxDistance: maxDistance as number,
+            preference,
+            date,
+          });
+        } catch (apiError) {
+          console.warn('API 调用失败，使用模拟数据:', apiError);
+          result = {
+            title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
+            places: mockPlaces,
+            summary: {
+              total_places: mockPlaces.length,
+              total_duration: mockPlaces.reduce((sum, p) => sum + p.duration, 0),
+            },
+          };
+        }
+      }
 
-      // 转换格式
       const itinerary = {
         id: 'itinerary-' + Date.now(),
         title: result.title,
         date: new Date().toISOString().split('T')[0],
         child_age: childAge,
-        places: result.places.map((place, idx) => ({
+        places: result.places.map((place: any, idx: number) => ({
           order: idx + 1,
           place_id: `place-${idx}`,
           name: place.name,
-          type: 'outdoor', // Perplexity 返回的没有这个字段
+          type: 'outdoor',
           address: place.address,
-          location: { lat: 39.9 + Math.random() * 0.1, lng: 116.4 + Math.random() * 0.1 }, // 模拟坐标
+          location: { lat: 39.9 + Math.random() * 0.1, lng: 116.4 + Math.random() * 0.1 },
           arrive_time: place.arrive_time,
           leave_time: place.leave_time,
           duration: place.duration,
           reason: place.reason,
           tips: place.tips,
         })),
-        route: result.places.slice(0, -1).map((place, idx) => ({
+        route: result.places.slice(0, -1).map((place: any, idx: number) => ({
           from: place.name,
           to: result.places[idx + 1]?.name || '',
           duration: Math.floor(Math.random() * 30) + 15,
@@ -230,6 +293,22 @@ export function GeneratePage() {
         </div>
       </Card>
 
+      {/* Demo 模式开关 */}
+      <Card className="mb-4 bg-blue-50">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={useMock}
+            onChange={(e) => setUseMock(e.target.checked)}
+            className="w-5 h-5 accent-blue-500"
+          />
+          <div>
+            <div className="font-medium text-gray-800">演示模式</div>
+            <div className="text-xs text-gray-500">不调用 API，使用内置示例</div>
+          </div>
+        </label>
+      </Card>
+
       {/* Error Message */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -239,7 +318,7 @@ export function GeneratePage() {
 
       {/* 生成按钮 */}
       <Button size="lg" className="w-full py-4" onClick={handleGenerate}>
-        ✨ Perplexity AI 生成行程
+        ✨ {useMock ? '生成行程（演示）' : 'Perplexity AI 生成行程'}
       </Button>
     </div>
   );
