@@ -35,7 +35,7 @@ export async function generateItinerary(
   const ageText = childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁';
 
   const query = '北京亲子活动推荐：孩子' + ageText + '，' + maxDistance + '公里内。' +
-    '请只返回JSON，格式：{"title":"标题","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":1,"total_duration":60}}';
+    '只返回JSON：{"title":"标题","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":1,"total_duration":60}}';
 
   const messages = [
     { role: 'user', content: query },
@@ -53,23 +53,46 @@ export async function generateItinerary(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
+  let content = data.choices?.[0]?.message?.content || '';
 
-  // 直接解析为 JSON
+  console.log('原始返回:', content);
+
+  // 清理内容
+  content = content.trim();
+  
   let result: GeneratedItinerary;
+  
+  // 方法1: 直接解析
   try {
     result = JSON.parse(content);
-  } catch (e) {
-    // 尝试提取 JSON
-    const start = content.indexOf('{');
-    const end = content.lastIndexOf('}') + 1;
-    if (start >= 0 && end > start) {
-      const jsonStr = content.substring(start, end);
-      result = JSON.parse(jsonStr);
-    } else {
-      throw new Error('无法解析返回内容: ' + content.substring(0, 50));
+    console.log('方法1成功');
+  } catch (e1) {
+    // 方法2: 提取JSON
+    try {
+      const start = content.indexOf('{');
+      const end = content.lastIndexOf('}') + 1;
+      if (start >= 0 && end > start) {
+        const jsonStr = content.substring(start, end);
+        console.log('提取的JSON:', jsonStr.substring(0, 100));
+        result = JSON.parse(jsonStr);
+        console.log('方法2成功');
+      } else {
+        throw new Error('找不到JSON');
+      }
+    } catch (e2) {
+      // 方法3: 尝试修复常见问题
+      try {
+        // 移除可能的markdown代码块标记
+        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        result = JSON.parse(content);
+        console.log('方法3成功');
+      } catch (e3) {
+        throw new Error('解析失败。内容: ' + content.substring(0, 100));
+      }
     }
   }
+
+  console.log('最终结果:', result);
 
   return {
     title: result.title || '周末亲子游',
