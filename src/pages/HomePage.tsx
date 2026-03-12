@@ -1,9 +1,17 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [savedCount, setSavedCount] = useState(0);
+
+  useEffect(() => {
+    // 检查收藏数量
+    const saved = JSON.parse(localStorage.getItem('weekend-planner-saved') || '[]');
+    setSavedCount(saved.length);
+  }, []);
 
   const features = [
     { icon: '👶', title: '年龄适配', desc: '根据宝宝年龄推荐合适场所' },
@@ -14,8 +22,19 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-[#FFF8F5]">
       {/* Header */}
-      <header className="p-4">
+      <header className="p-4 flex items-center justify-between">
         <div className="text-2xl font-bold text-[#FF6B35]">周末去哪玩</div>
+        <button 
+          onClick={() => navigate('/saved')}
+          className="flex items-center gap-1 text-gray-600 hover:text-[#FF6B35]"
+        >
+          <span>💾</span>
+          {savedCount > 0 && (
+            <span className="bg-[#FF6B35] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              {savedCount}
+            </span>
+          )}
+        </button>
       </header>
 
       {/* Hero */}
