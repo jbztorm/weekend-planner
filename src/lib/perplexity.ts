@@ -34,10 +34,8 @@ export async function generateItinerary(
 
   const ageText = childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁';
 
-  // 简化 prompt，直接要求返回简单的 JSON
   const query = '北京亲子活动推荐：孩子' + ageText + '，' + maxDistance + '公里内。' +
-    '请只返回以下格式的JSON，不要其他内容：' +
-    '{"title":"标题","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":1,"total_duration":60}}';
+    '请只返回JSON，格式：{"title":"标题","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":1,"total_duration":60}}';
 
   const messages = [
     { role: 'user', content: query },
@@ -57,18 +55,19 @@ export async function generateItinerary(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
 
-  // 直接解析整个响应为 JSON
+  // 直接解析为 JSON
   let result: GeneratedItinerary;
   try {
-    // 尝试直接解析
     result = JSON.parse(content);
-  } catch {
-    // 如果失败，尝试提取 JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      result = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    // 尝试提取 JSON
+    const start = content.indexOf('{');
+    const end = content.lastIndexOf('}') + 1;
+    if (start >= 0 && end > start) {
+      const jsonStr = content.substring(start, end);
+      result = JSON.parse(jsonStr);
     } else {
-      throw new Error('无法解析返回内容');
+      throw new Error('无法解析返回内容: ' + content.substring(0, 50));
     }
   }
 
