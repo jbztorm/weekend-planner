@@ -30,10 +30,9 @@ export interface GeneratedItinerary {
 export async function generateItinerary(
   params: ItineraryParams
 ): Promise<GeneratedItinerary> {
-  const { childAge, maxDistance, preference, date } = params;
+  const { childAge, maxDistance } = params;
 
   const ageText = childAge === '0-1' ? '0-1岁' : childAge === '1-3' ? '1-3岁' : '3-6岁';
-  const dateText = date === 'saturday' ? '周六' : date === 'sunday' ? '周日' : '周末两天';
 
   const query = '我住在北京市区，孩子' + ageText + '，周末想去遛娃。' +
     '请帮我推荐' + maxDistance + '公里内最好的亲子场所。' +
@@ -41,17 +40,10 @@ export async function generateItinerary(
     '{"title":"周末亲子游","places":[{"name":"名称","address":"地址","reason":"理由","arrive_time":"09:30","leave_time":"10:30","duration":60,"tips":"提示"}],"summary":{"total_places":4,"total_duration":240}}';
 
   const messages = [
-    {
-      role: 'system',
-      content: '你是一位专业的北京亲子活动规划师。只输出JSON格式。',
-    },
-    {
-      role: 'user',
-      content: query,
-    },
+    { role: 'system', content: '你是一位专业的北京亲子活动规划师。只输出JSON格式。' },
+    { role: 'user', content: query },
   ];
 
-  // 调用后端 API 代理
   const response = await fetch('/api/perplexity', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -72,7 +64,6 @@ export async function generateItinerary(
     throw new Error('API 返回内容为空');
   }
 
-  // 解析 JSON
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error('无法解析返回内容: ' + content.substring(0, 50));
