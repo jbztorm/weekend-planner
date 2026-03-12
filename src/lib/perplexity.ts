@@ -98,7 +98,7 @@ export async function generateItinerary(
 
   try {
     const response = await perplexity.chat.completions.create({
-      model: 'llama-3.1-sonar-small-128k-online',
+      model: 'sonar-pro',
       messages: [
         {
           role: 'system',
@@ -150,7 +150,7 @@ export async function searchPlaces(
 ): Promise<string[]> {
   try {
     const response = await perplexity.chat.completions.create({
-      model: 'llama-3.1-sonar-small-128k-online',
+      model: 'sonar-pro',
       messages: [
         {
           role: 'user',

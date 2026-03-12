@@ -133,8 +133,10 @@ export function GeneratePage() {
             preference,
             date,
           });
-        } catch (apiError) {
-          console.warn('API 调用失败，使用模拟数据:', apiError);
+        } catch (apiError: any) {
+          console.warn('API 调用失败:', apiError);
+          // 显示错误但仍使用模拟数据
+          setError('API 调用失败，已使用演示数据。如需真实生成，请检查 API 配置。');
           result = {
             title: date === 'weekend' ? '周末亲子欢乐游' : date === 'saturday' ? '周六亲子游' : '周日亲子游',
             places: mockPlaces,
