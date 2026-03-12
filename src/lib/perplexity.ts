@@ -77,17 +77,23 @@ export async function generateItinerary(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
 
+  console.log('📥 API 返回 content:', content.substring(0, 200));
+
   if (!content) {
     throw new Error('API 返回内容为空');
   }
 
   // 解析 JSON
   const jsonMatch = content.match(/\{[\s\S]*\}/);
+  console.log('📋 JSON 匹配:', jsonMatch ? '成功' : '失败');
+  
   if (!jsonMatch) {
     throw new Error('无法解析返回内容');
   }
 
+  console.log('📦 解析 JSON...');
   const result = JSON.parse(jsonMatch[0]) as GeneratedItinerary;
+  console.log('✅ 解析结果:', result);
 
   return {
     title: result.title || '周末亲子游',
